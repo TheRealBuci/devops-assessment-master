@@ -1,0 +1,24 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Secrets
+.env
+*.pem
+*.key
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+.gitlab-ci-local

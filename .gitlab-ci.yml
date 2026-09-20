@@ -1,0 +1,46 @@
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  APP_NAMESPACE: "homework"
+  APP_ENVIRONMENT: "dev"
+
+test:
+  stage: test
+  image: python:3.12
+  script:
+    - python -m pip install --upgrade pip
+    - pip install -r app/requirements.txt
+    - python -m compileall app
+    - pytest tests --maxfail=1 --disable-warnings -q
+
+build:
+  stage: build
+  image: docker:24.0
+  services:
+    - docker:dind
+  script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker build -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA" -t "$CI_REGISTRY_IMAGE:latest" .
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE:latest"
+
+deploy:
+  stage: deploy
+  image:
+    name: alpine/helm:3.14.4
+    entrypoint: [""]
+  dependencies:
+    - build
+  script:
+    - |
+      helm upgrade --install myapp ./helm \
+        --namespace "$APP_NAMESPACE" \
+        --create-namespace \
+        --wait \
+        --timeout 180s \
+        --set image.repository="$CI_REGISTRY_IMAGE" \
+        --set image.tag="$CI_COMMIT_SHA" \
+        --set environment="$APP_ENVIRONMENT"
